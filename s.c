@@ -12,9 +12,17 @@
 #include <arpa/inet.h>      //sockaddr_in
 #include <unistd.h> //fork;
 
+#include <sys/select.h>
+#include <sys/time.h>
+
 #define SERVER_PORT 12138
 #define lislen 10
 #define Max_buf 4096
+
+int MAX(int a ,int b)
+{
+    return (a>b)?a:b;
+}
 
 int main(int argc,char *argv[])
 {
@@ -26,6 +34,12 @@ int main(int argc,char *argv[])
     char recvbuf[Max_buf], sendbuf[Max_buf];
     int recvsize,sendsize;
     int pid =0;
+    struct timeval timeout;
+    
+    fd_set servfd,recvfd;
+    int fd_A[lislen+1];
+    int cnum;
+    int max_servfd,max_recvfd;
     
     if(argc!=1)
     {
@@ -65,69 +79,90 @@ int main(int argc,char *argv[])
         exit(-1);
     }
     
+    timeout.tv_sec=1;
+    timeout.tv_usec=0;
+    
+    
     //接受客户的请求???
-    int a=0;
-    if((clientfd=accept(sockfd,(struct sockaddr*)& csockaddr,&a))==-1)
-    {
-        perror("fail to accept");
-        exit(-1);
-    }
-    printf("Success to accept a connection request...\n");
+    socklen_t a=sizeof(csockaddr);
     
-    printf("%s join in!\n",inet_ntoa(csockaddr.sin_addr));//??? 
+    FD_ZERO(&servfd);
+    FD_ZERO(&recvfd);
+    FD_SET(sockfd,&servfd);
+    cnum=0;
     
-    if((pid=fork())<0)
+    max_servfd=sockfd;
+    max_recvfd=0;
+    
+    
+    memset(fd_A,0,sizeof(fd_A));
+    
+    while(1)
     {
-        perror("fail to fork");
-    }
-    else if(pid>0)
-    {
-        while(1)
+        FD_ZERO(&servfd);
+        FD_ZERO(&recvfd);
+        FD_SET(sockfd,&servfd);
+        
+        switch(select(max_servfd+1,&servfd,NULL,NULL,&timeout))
         {
-            fgets(sendbuf,Max_buf,stdin);
-            if((sendsize=send(clientfd,sendbuf,strlen(sendbuf),0))!=strlen(sendbuf))
-            {
-                perror("fail to send datas");
-                exit(1);
-            }
-            memset(sendbuf,0,sizeof(sendbuf));
-        }
-
-    }
-    else
-    {
-        while(1)
-            { 
-                
-                int recvSize;
-                if((recvSize=recv(clientfd,recvbuf,Max_buf,0))==-1)
+            case -1://失败
+                perror("select error");
+                break;
+            case 0://规定时间内没有任何描述符有数据
+                break;
+            default:
+                if(FD_ISSET(sockfd,&servfd))
                 {
-                    perror("fail to receive datas");
-                    exit(1);
+                        if((clientfd=accept(sockfd,(struct sockaddr*)&csockaddr,&a))==-1)
+                        {
+                            perror("fail to accept");
+                            exit(-1);
+                        }
+                        printf("Success to accept a connection request...\n");
+                        printf(">>>>>%s:%d join in!\n",inet_ntoa(csockaddr.sin_addr),ntohs(csockaddr.sin_port));//??? 
+                        
+                        fd_A[cnum++]=clientfd;
+                        max_recvfd=MAX(max_recvfd,clientfd);
                 }
-            printf("Client:%s\n",recvbuf);
-            memset(recvbuf,0,Max_buf); 
+                break;
         }
-    }        
+        for(int i=0;i<lislen;i++)
+        {
+            if(fd_A[i]!=0)
+            {
+                FD_SET(fd_A[i],&recvfd);
+            }
+        }
+        switch(select(max_recvfd+1,&recvfd,NULL,NULL,&timeout))
+        {
+            case -1:
+                break;
+            case 0:
+                break;
+            default:
+                for(int i=0;i<cnum;i++)
+                {
+                    if(FD_ISSET(fd_A[i],&recvfd))
+                    {
+                        if((recvsize=recv(fd_A[i],recvbuf,Max_buf,0))==-1)
+                        {
+                            printf("close\n");
+                            FD_CLR(fd_A[i],&recvfd);
+                            fd_A[i]=0;
+                        }
+                        else
+                        {
+                            printf("Client:%s\n",recvbuf);
+                            memset(recvbuf,0,Max_buf);
+                        }
+                    }
+                }
+                break;
+        }
+    }
+    
     return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+//98:memset
+//select servfd recvfd;
+//recv :
