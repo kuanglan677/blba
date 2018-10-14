@@ -37,7 +37,14 @@ int main(int argc,char *argv[])
     struct timeval timeout;
     
     fd_set servfd,recvfd;
+    
     int fd_A[lislen+1];
+    char fd_B[lislen+1][32];
+    int fd_C[lislen+1];
+    
+    char name[32];
+    
+    
     int cnum;
     int max_servfd,max_recvfd;
     
@@ -96,7 +103,8 @@ int main(int argc,char *argv[])
     
     
     memset(fd_A,0,sizeof(fd_A));
-    
+    memset(fd_B,0,sizeof(fd_B));
+    memset(fd_C,-1,sizeof(fd_C));
     while(1)
     {
         FD_ZERO(&servfd);
@@ -121,8 +129,18 @@ int main(int argc,char *argv[])
                         printf("Success to accept a connection request...\n");
                         printf(">>>>>%s:%d join in!\n",inet_ntoa(csockaddr.sin_addr),ntohs(csockaddr.sin_port));//??? 
                         
-                        fd_A[cnum++]=clientfd;
-                        max_recvfd=MAX(max_recvfd,clientfd);
+                        
+                        
+                    recv(clientfd,(char *)&name,sizeof(name),0);
+                    printf("客户名是：%s\t对应编号为：%d\n",name,clientfd);
+                    
+                    memset(recvbuf,0,sizeof(recvbuf));
+                    
+                    fd_A[cnum]=clientfd;
+                    max_recvfd=MAX(max_recvfd,clientfd);
+                    strcpy(fd_B[cnum],name);
+                    cnum++;
+                        
                 }
                 break;
         }
@@ -149,15 +167,21 @@ int main(int argc,char *argv[])
                             printf("fd %dclose\n",fd_A[i]);
                             FD_CLR(fd_A[i],&recvfd);
                             fd_A[i]=0;
+                            //strcpy(fd_B[i],NULL);
                         }
                         else
                         {
+                            strcpy(sendbuf,fd_B[i]);
+                            strcat(sendbuf,":");
+                            strcat(sendbuf,recvbuf);
+                            printf("数据是:%s\n",sendbuf);
                             for(int j=0;j<lislen;j++)
                             {
                                 if(fd_A[j]!=0&&i!=j)
                                 {
+                                    
                                     printf("数据发往%d，",fd_A[j]);
-                                    if(send(fd_A[j],recvbuf,strlen(recvbuf),0)!=strlen(recvbuf))
+                                    if(send(fd_A[j],sendbuf,strlen(sendbuf),0)!=strlen(sendbuf))
                                     {
                                         perror("fail");exit(-1);
                                     }
@@ -168,6 +192,7 @@ int main(int argc,char *argv[])
                                 }
                             }
                             memset(recvbuf,0,Max_buf);
+                            memset(sendbuf,0,Max_buf);
                         }
                     }
                 }

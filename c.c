@@ -71,6 +71,8 @@ int main(int argc,char **argv)
     }
     printf("Success to connect the socket...\n");
     
+    send(sockfd,username,sizeof(username),0);
+    
     if((pid=fork())<0)
     {
         perror("fail to fork");
@@ -81,9 +83,9 @@ int main(int argc,char **argv)
     {
         while(1)
         {
-            printf("you: ");
+            //printf("you: ");
             fgets(sendbuf,Max_buf,stdin);
-            send(sockfd,sendbuf,sizeof(sendbuf),0);
+            (send(sockfd,sendbuf,sizeof(sendbuf),0)==-1);
             memset(sendbuf,0,sizeof(sendbuf));
         }
 
@@ -92,8 +94,12 @@ int main(int argc,char **argv)
     {
         while(1)
         {
-            recv(sockfd,recvbuf,Max_buf,0);
-            printf("server:%s\n",recvbuf);
+            if(recv(sockfd,recvbuf,Max_buf,0)==-1)
+            {
+                perror("Server maybe shutdown");
+                exit(0);
+            }
+            printf("%s\n",recvbuf);
             memset(recvbuf,0,Max_buf); 
         }
     }        
