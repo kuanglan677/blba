@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <time.h>
 #include <stdlib.h> //exit()
 #include <errno.h>
 #include <string.h>
@@ -27,6 +28,9 @@ int main(int argc,char **argv)
     
     int sockfd;
     int pid;
+    
+    time_t now;
+    struct tm *timenow;
     
     if(argc!=3)
     {
@@ -73,6 +77,9 @@ int main(int argc,char **argv)
     
     send(sockfd,username,sizeof(username),0);
     
+    strcat(username,".txt");
+    FILE* fp=fopen(username,"a");
+    
     if((pid=fork())<0)
     {
         perror("fail to fork");
@@ -84,8 +91,20 @@ int main(int argc,char **argv)
         while(1)
         {
             //printf("you: ");
+            time(&now);//获取自从1900年来经历的秒数
+            timenow=localtime(&now);//将秒数转化为具体时间
+            fprintf(fp,"%d %d %d %02d:%02d:%02d\n",timenow->tm_year+1900,
+                timenow->tm_mon+1,timenow->tm_mday,timenow->tm_hour,
+                timenow->tm_min,timenow->tm_sec);
+            
             fgets(sendbuf,Max_buf,stdin);
+            
+            fprintf(fp,"Me:%s\n",sendbuf);
+            fflush(fp);
+            
             (send(sockfd,sendbuf,sizeof(sendbuf),0)==-1);
+            
+            
             memset(sendbuf,0,sizeof(sendbuf));
         }
 
@@ -99,11 +118,35 @@ int main(int argc,char **argv)
                 perror("Server maybe shutdown");
                 exit(0);
             }
+            
+            //s输出时间
+            time(&now);//获取自从1900年来经历的秒数
+            timenow=localtime(&now);//将秒数转化为具体时间
+            printf("%d %d %d %02d:%02d:%02d\n",timenow->tm_year+1900,
+                timenow->tm_mon+1,timenow->tm_mday,timenow->tm_hour,
+                timenow->tm_min,timenow->tm_sec);
+            
             printf("%s\n",recvbuf);
+            
+            
+            //保存聊天记录
+            fprintf(fp,"%d %d %d %02d:%02d:%02d\n",timenow->tm_year+1900,
+                timenow->tm_mon+1,timenow->tm_mday,timenow->tm_hour,
+                timenow->tm_min,timenow->tm_sec);
+//             char times;
+//             strcpy(times,timenow->tm_hour);
+//             strcat(times,":");
+//             strcat(times,timenow->tm_min);
+//             strcat(times,":");
+//             strcat(times,timenow->tm_sec);
+//             fwrite(times,1,sizeof(times),fp);
+            fprintf(fp,"%s\n",recvbuf);
+            fflush(fp);
+
+            
             memset(recvbuf,0,Max_buf); 
         }
     }        
-
-    
+    fclose(fp);
     return 0;
 }
