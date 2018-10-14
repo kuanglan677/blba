@@ -113,9 +113,10 @@ int main(int argc,char **argv)
     {
         while(1)
         {
-            if(recv(sockfd,recvbuf,Max_buf,0)==-1)
+            if(recv(sockfd,recvbuf,Max_buf,0)<=0)
             {
                 perror("Server maybe shutdown");
+            
                 exit(0);
             }
             
