@@ -71,24 +71,33 @@ int main(int argc,char **argv)
     }
     printf("Success to connect the socket...\n");
     
-    if((pid=fork())==-1)
+    if((pid=fork())<0)
     {
         perror("fail to fork");
         exit(-1);
     }
 
-
-    while(1)
+    else if(pid>0)
     {
-        printf("you: ");
-        fgets(sendbuf,Max_buf,stdin);
-        send(sockfd,sendbuf,sizeof(sendbuf),0);
-        memset(sendbuf,0,sizeof(sendbuf));
-        recv(sockfd,recvbuf,Max_buf,0);
-        printf("Server:%s\n",recvbuf);
-        memset(recvbuf,0,sizeof(recvbuf));
+        while(1)
+        {
+            printf("you: ");
+            fgets(sendbuf,Max_buf,stdin);
+            send(sockfd,sendbuf,sizeof(sendbuf),0);
+            memset(sendbuf,0,sizeof(sendbuf));
+        }
+
     }
+    else
+    {
+        while(1)
+        {
+            recv(sockfd,recvbuf,Max_buf,0);
+            printf("server:%s\n",recvbuf);
+            memset(recvbuf,0,Max_buf); 
+        }
+    }        
+
     
     return 0;
 }
- 

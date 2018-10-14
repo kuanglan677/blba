@@ -10,6 +10,7 @@
 
 #include <netinet/in.h>
 #include <arpa/inet.h>      //sockaddr_in
+#include <unistd.h> //fork;
 
 #define SERVER_PORT 12138
 #define lislen 10
@@ -24,6 +25,7 @@ int main(int argc,char *argv[])
     
     char recvbuf[Max_buf], sendbuf[Max_buf];
     int recvsize,sendsize;
+    int pid =0;
     
     if(argc!=1)
     {
@@ -74,16 +76,39 @@ int main(int argc,char *argv[])
     
     printf("%s join in!\n",inet_ntoa(csockaddr.sin_addr));//??? 
     
-    while(1)
+    if((pid=fork())<0)
     {
-        recv(clientfd,recvbuf,Max_buf,0);
-        printf("%s\n",recvbuf);
-        memset(recvbuf,0,Max_buf);
-        printf("you: ");
-        fgets(sendbuf,Max_buf,stdin);
-        send(clientfd,sendbuf,sizeof(sendbuf),0);
-        memset(sendbuf,0,Max_buf);
+        perror("fail to fork");
     }
+    else if(pid>0)
+    {
+        while(1)
+        {
+            fgets(sendbuf,Max_buf,stdin);
+            if((sendsize=send(clientfd,sendbuf,strlen(sendbuf),0))!=strlen(sendbuf))
+            {
+                perror("fail to send datas");
+                exit(1);
+            }
+            memset(sendbuf,0,sizeof(sendbuf));
+        }
+
+    }
+    else
+    {
+        while(1)
+            { 
+                
+                int recvSize;
+                if((recvSize=recv(clientfd,recvbuf,Max_buf,0))==-1)
+                {
+                    perror("fail to receive datas");
+                    exit(1);
+                }
+            printf("Client:%s\n",recvbuf);
+            memset(recvbuf,0,Max_buf); 
+        }
+    }        
     return 0;
 }
 
@@ -106,4 +131,3 @@ int main(int argc,char *argv[])
 
 
 
- 
