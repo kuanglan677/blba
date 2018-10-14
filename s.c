@@ -213,10 +213,15 @@ int main(int argc,char *argv[])
                                     strcat(sendbuf,fd_B[fd_C[n]]);
                                     strcat(sendbuf,"通信ing，请稍后联系");
                                     send(fd_A[i],sendbuf,strlen(sendbuf),0);
+                                    
+//                                     strcpy(sendbuf,"服务器：");
+//                                     strcat(sendbuf,rt);
+//                                     strcat(sendbuf,"现在处于空闲状态");
+//                                     send(fd_A[i],sendbuf,strlen(sendbuf),0);
+                                    
                                     aaa=1;
                                     //send(fd_A[i],fd_B[fd_C[n]],strlen(fd_B[fd_C[n]]),0);
                                 }
-                                
                                 if(aaa==1) break;
                                 
                                 
@@ -242,25 +247,6 @@ int main(int argc,char *argv[])
                                     strcat(sendbuf,"私聊，若想退出 请输入“!”");
                                     send(fd_A[i],sendbuf,strlen(sendbuf),0);
                                 }
-//                                 switch(fd_C[i])
-//                                 {
-//                                     case -1:
-//                                         fd_C[i]=n;fd_C[n]=i;
-//                                         strcpy(sendbuf,fd_B[i]);
-//                                         strcat(sendbuf,"对你私信：");
-//                                         strcat(sendbuf,recvbuf);
-//                                         send(fd_A[n],sendbuf,strlen(sendbuf),0);
-//                                         break;
-//                                     case n:
-//                                         strcpy(sendbuf,fd_B[i]);
-//                                         strcat(sendbuf,"对你私信：");
-//                                         strcat(sendbuf,recvbuf);
-//                                         send(fd_A[n],sendbuf,strlen(sendbuf),0);
-//                                         break;
-//                                     default://正与其他人通信
-//                                         send(fd_A[i],"服务器：该用户正在与其他用户通信，请稍后联系",strlen("服务器：该用户正在与其他用户通信，请稍后联系"),0);
-//                                         break;
-//                                 }
                                 memset(sendbuf,0,Max_buf);
                             }
                             else if(recvbuf[0]=='!')//取消私聊
@@ -275,6 +261,21 @@ int main(int argc,char *argv[])
                                     memset(recvbuf,0,Max_buf);
                                     send(fd_A[fd_C[i]],"服务器：你已被请求取消私聊",strlen("服务器：你已被请求取消私聊"),0);
                                     
+                                    
+                                    strcpy(sendbuf,"广播：");
+                                    strcat(sendbuf,fd_B[fd_C[i]]);
+                                    strcat(sendbuf,"和");
+                                    strcat(sendbuf,fd_B[i]);
+                                    strcat(sendbuf,"刚刚结束了私聊，快去找他们聊天吧～");
+                                    for(int j=0;j<lislen;j++)
+                                    {
+                                        if(fd_A[j]!=0&&i!=j&&j!=fd_C[i])
+                                        {
+                                            send(fd_A[j],sendbuf,strlen(sendbuf),0)!=strlen(sendbuf);
+                                        }
+                                    }
+                                    
+
                                     fd_C[fd_C[i]]=-1;fd_C[i]=-1;
                                     send(fd_A[i],"服务器：你已成功取消私聊",strlen("服务器：你已成功取消私聊"),0);
                                 }
@@ -307,32 +308,6 @@ int main(int argc,char *argv[])
                                 memset(recvbuf,0,Max_buf);
                                 memset(sendbuf,0,Max_buf);
                             }
-                            
-//                             strcpy(sendbuf,fd_B[i]);
-//                             strcat(sendbuf,":");
-//                             strcat(sendbuf,recvbuf);
-//                             printf("数据是:%s\n",sendbuf);
-//                             
-//                             //获得私聊名字
-//                             
-//                             for(int j=0;j<lislen;j++)
-//                             {
-//                                 if(fd_A[j]!=0&&i!=j)
-//                                 {
-//                                     
-//                                     printf("数据发往%d，",fd_A[j]);
-//                                     if(send(fd_A[j],sendbuf,strlen(sendbuf),0)!=strlen(sendbuf))
-//                                     {
-//                                         perror("fail");exit(-1);
-//                                     }
-//                                     else
-//                                     {
-//                                         printf("Success\n");
-//                                     }
-//                                 }
-//                             }
-//                             memset(recvbuf,0,Max_buf);
-//                             memset(sendbuf,0,Max_buf);
                         }
                     }
                 }
@@ -342,6 +317,3 @@ int main(int argc,char *argv[])
     
     return 0;
 }
-//98:memset
-//select servfd recvfd;
-//recv :
