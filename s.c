@@ -24,6 +24,22 @@ int MAX(int a ,int b)
     return (a>b)?a:b;
 }
 
+void getname(char s[],char rt[])
+{
+    for(int i=1;s[i]!=' ';i++)
+        rt[i-1]=s[i];
+} 
+
+int getnum(char rt[],char fdb[][32])
+{
+    for(int i=0;i<lislen+1;i++)
+    {
+       if(strcmp(fdb[i],rt)==0)
+           return i;
+    }
+    return -1;
+}
+
 int main(int argc,char *argv[])
 {
     struct sockaddr_in ssockaddr,csockaddr;
@@ -167,32 +183,156 @@ int main(int argc,char *argv[])
                             printf("fd %dclose\n",fd_A[i]);
                             FD_CLR(fd_A[i],&recvfd);
                             fd_A[i]=0;
+                            
+                            if(fd_C[i]!=-1)
+                            {fd_C[fd_C[i]]=-1;fd_C[i]=-1;}
+            
                             //strcpy(fd_B[i],NULL);
                         }
                         else
                         {
-                            strcpy(sendbuf,fd_B[i]);
-                            strcat(sendbuf,":");
-                            strcat(sendbuf,recvbuf);
-                            printf("数据是:%s\n",sendbuf);
-                            for(int j=0;j<lislen;j++)
+                            if(recvbuf[0]=='@')//私聊
                             {
-                                if(fd_A[j]!=0&&i!=j)
+                                char rt[10];//名字
+                                memset(rt,0,10);
+                                getname(recvbuf,rt);
+                                int n;
+                                if((n=getnum(rt,fd_B))==-1)//没有该人
                                 {
+                                    send(fd_A[i],"服务器：没有该用户或者该用户已下线",strlen("服务器：没有该用户或者该用户已下线"),0);
+                                    printf("%s %d\n",rt,n);
+                                    break;
+                                }printf("%s %d\n",rt,n);
+                                
+                                int aaa=0;
+                                if(fd_C[n]==-1){}
+                                else if(fd_C[n]==i){}
+                                else
+                                {
+                                    strcpy(sendbuf,"服务器：该用户正在与其他用户");
+                                    strcat(sendbuf,fd_B[fd_C[n]]);
+                                    strcat(sendbuf,"通信ing，请稍后联系");
+                                    send(fd_A[i],sendbuf,strlen(sendbuf),0);
+                                    aaa=1;
+                                    //send(fd_A[i],fd_B[fd_C[n]],strlen(fd_B[fd_C[n]]),0);
+                                }
+                                
+                                if(aaa==1) break;
+                                
+                                
+                                if(fd_C[i]==-1)
+                                {
+                                    fd_C[i]=n;fd_C[n]=i;
+                                    strcpy(sendbuf,fd_B[i]);
+                                    strcat(sendbuf," 对你私信：");
+                                    strcat(sendbuf,recvbuf);
+                                    send(fd_A[n],sendbuf,strlen(sendbuf),0);
+                                }
+                                else if(fd_C[i]==n)
+                                {
+                                    strcpy(sendbuf,fd_B[i]);
+                                    strcat(sendbuf," 对你私信：");
+                                    strcat(sendbuf,recvbuf);
+                                    send(fd_A[n],sendbuf,strlen(sendbuf),0);
+                                }
+                                else
+                                {
+                                    strcpy(sendbuf,"服务器：你现在正与");
+                                    strcat(sendbuf,fd_B[fd_C[i]]);
+                                    strcat(sendbuf,"私聊，若想退出 请输入“!”");
+                                    send(fd_A[i],sendbuf,strlen(sendbuf),0);
+                                }
+//                                 switch(fd_C[i])
+//                                 {
+//                                     case -1:
+//                                         fd_C[i]=n;fd_C[n]=i;
+//                                         strcpy(sendbuf,fd_B[i]);
+//                                         strcat(sendbuf,"对你私信：");
+//                                         strcat(sendbuf,recvbuf);
+//                                         send(fd_A[n],sendbuf,strlen(sendbuf),0);
+//                                         break;
+//                                     case n:
+//                                         strcpy(sendbuf,fd_B[i]);
+//                                         strcat(sendbuf,"对你私信：");
+//                                         strcat(sendbuf,recvbuf);
+//                                         send(fd_A[n],sendbuf,strlen(sendbuf),0);
+//                                         break;
+//                                     default://正与其他人通信
+//                                         send(fd_A[i],"服务器：该用户正在与其他用户通信，请稍后联系",strlen("服务器：该用户正在与其他用户通信，请稍后联系"),0);
+//                                         break;
+//                                 }
+                                memset(sendbuf,0,Max_buf);
+                            }
+                            else if(recvbuf[0]=='!')//取消私聊
+                            {
+                                if(fd_C[i]==-1)
+                                {
+                                    send(fd_A[i],"服务器：你现在尚无进行私聊，无需取消",strlen("服务器：你现在尚无进行私聊，无需取消"),0);
+                                }
+                                else
+                                {
+                                    send(fd_A[fd_C[i]],recvbuf,strlen(recvbuf),0);
+                                    memset(recvbuf,0,Max_buf);
+                                    send(fd_A[fd_C[i]],"服务器：你已被请求取消私聊",strlen("服务器：你已被请求取消私聊"),0);
                                     
-                                    printf("数据发往%d，",fd_A[j]);
-                                    if(send(fd_A[j],sendbuf,strlen(sendbuf),0)!=strlen(sendbuf))
-                                    {
-                                        perror("fail");exit(-1);
-                                    }
-                                    else
-                                    {
-                                        printf("Success\n");
-                                    }
+                                    fd_C[fd_C[i]]=-1;fd_C[i]=-1;
+                                    send(fd_A[i],"服务器：你已成功取消私聊",strlen("服务器：你已成功取消私聊"),0);
                                 }
                             }
-                            memset(recvbuf,0,Max_buf);
-                            memset(sendbuf,0,Max_buf);
+                            else
+                            {
+                                strcpy(sendbuf,fd_B[i]);
+                                strcat(sendbuf,":");
+                                strcat(sendbuf,recvbuf);
+                                printf("数据是:%s\n",sendbuf);
+                            
+                                //获得私聊名字
+                            
+                                for(int j=0;j<lislen;j++)
+                                {
+                                    if(fd_A[j]!=0&&i!=j)
+                                    {
+                                    
+                                        printf("数据发往%d，",fd_A[j]);
+                                        if(send(fd_A[j],sendbuf,strlen(sendbuf),0)!=strlen(sendbuf))
+                                        {
+                                            perror("fail");exit(-1);
+                                        }
+                                        else
+                                        {
+                                            printf("Success\n");
+                                        }
+                                    }
+                                }
+                                memset(recvbuf,0,Max_buf);
+                                memset(sendbuf,0,Max_buf);
+                            }
+                            
+//                             strcpy(sendbuf,fd_B[i]);
+//                             strcat(sendbuf,":");
+//                             strcat(sendbuf,recvbuf);
+//                             printf("数据是:%s\n",sendbuf);
+//                             
+//                             //获得私聊名字
+//                             
+//                             for(int j=0;j<lislen;j++)
+//                             {
+//                                 if(fd_A[j]!=0&&i!=j)
+//                                 {
+//                                     
+//                                     printf("数据发往%d，",fd_A[j]);
+//                                     if(send(fd_A[j],sendbuf,strlen(sendbuf),0)!=strlen(sendbuf))
+//                                     {
+//                                         perror("fail");exit(-1);
+//                                     }
+//                                     else
+//                                     {
+//                                         printf("Success\n");
+//                                     }
+//                                 }
+//                             }
+//                             memset(recvbuf,0,Max_buf);
+//                             memset(sendbuf,0,Max_buf);
                         }
                     }
                 }
