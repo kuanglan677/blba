@@ -144,15 +144,29 @@ int main(int argc,char *argv[])
                 {
                     if(FD_ISSET(fd_A[i],&recvfd))
                     {
-                        if((recvsize=recv(fd_A[i],recvbuf,Max_buf,0))==-1)
+                        if((recvsize=recv(fd_A[i],recvbuf,Max_buf,0))==-1||recvsize==0)
                         {
-                            printf("close\n");
+                            printf("fd %dclose\n",fd_A[i]);
                             FD_CLR(fd_A[i],&recvfd);
                             fd_A[i]=0;
                         }
                         else
                         {
-                            printf("Client:%s\n",recvbuf);
+                            for(int j=0;j<lislen;j++)
+                            {
+                                if(fd_A[j]!=0&&i!=j)
+                                {
+                                    printf("数据发往%d，",fd_A[j]);
+                                    if(send(fd_A[j],recvbuf,strlen(recvbuf),0)!=strlen(recvbuf))
+                                    {
+                                        perror("fail");exit(-1);
+                                    }
+                                    else
+                                    {
+                                        printf("Success\n");
+                                    }
+                                }
+                            }
                             memset(recvbuf,0,Max_buf);
                         }
                     }
