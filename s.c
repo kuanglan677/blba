@@ -44,6 +44,13 @@ int main(int argc,char *argv[])
 {
     struct sockaddr_in ssockaddr,csockaddr;
     
+	// struct sockaddr_in
+	//{
+	//  short sin_family;协议族
+	//	unsigned short sin_port  端口号
+	//	struct in_addr sin_addr; ip地址
+	//  unsigned char sin_zero[8]; 没有什么实际意义，只是与sockaddr内存保持对齐
+	//}
     int sockfd;
     int clientfd;
     
@@ -51,13 +58,29 @@ int main(int argc,char *argv[])
     int recvsize,sendsize;
     int pid =0;
     struct timeval timeout;
+  
+  //"struct timeval
+	//{
+	//	 size_t second;
+	//	 size_d minutes;
+	//}"
+ 
+	fd_set servfd,recvfd;
     
-    fd_set servfd,recvfd;
+	
+	//一种特殊的数据结构  是一long类型的数组
+	//每一个数组元素都能与一打开的文件句柄建立联系
+	//servfd 保存可以发送的文件描述符
+	//resvfd 保存可以接受的文件描述符
     
-    int fd_A[lislen+1];
+	
+	int fd_A[lislen+1];
+	
+	//在服务器上连接的号
     char fd_B[lislen+1][32];
-    int fd_C[lislen+1];
-    
+	//保存的姓名
+   int fd_C[lislen+1];
+	//保存某个描述符正在聊天的账号
     char name[32];
     
     
@@ -80,13 +103,23 @@ int main(int argc,char *argv[])
     
     //初始化服务器套接字地址
     ssockaddr.sin_family=AF_INET;
+	
     ssockaddr.sin_port=htons(SERVER_PORT);
     ssockaddr.sin_addr.s_addr=htonl(INADDR_ANY);
+	//hton将主机序改为网络字节序
     
     //???
     int on =1;
     setsockopt(sockfd,SOL_SOCKET,SO_REUSEADDR,&on,sizeof(on));
-    
+    /*  设置关闭后，可继续重用该socket
+	int setsockopt(int sockfd,int level,int optname,const void*optval,socklen_t optlen);
+	sockfd:标识一个套接口描述字
+	level:选项定义的层次；
+	optname:需要设置的选项
+	optval 指针，指向待设置的心智缓冲区
+	optlen 缓冲区长度
+	
+	*/
     //bind()函数通过给一个未命名套接口分配一个本地名字来为套接口建立本地捆绑（主机地址/端口号）。
     if(bind(sockfd,(struct sockaddr *)&ssockaddr,sizeof(struct sockaddr))==-1)
     {
@@ -95,7 +128,7 @@ int main(int argc,char *argv[])
     }
     printf("Success to bind the socket...\n");
     
-    //
+    //创建一个套接口并监听申请的连接，等待队列的最大长度
     if(listen(sockfd,lislen)==-1)
     {
         perror("fail to listen");
@@ -109,6 +142,7 @@ int main(int argc,char *argv[])
     //接受客户的请求???
     socklen_t a=sizeof(csockaddr);
     
+	//清空
     FD_ZERO(&servfd);
     FD_ZERO(&recvfd);
     FD_SET(sockfd,&servfd);
@@ -129,6 +163,7 @@ int main(int argc,char *argv[])
         
         switch(select(max_servfd+1,&servfd,NULL,NULL,&timeout))
         {
+			//返回出于就绪状态并且已经包含在fd_set结构的描述字总数，并且实现半阻塞模式
             case -1://失败
                 perror("select error");
                 break;
@@ -136,7 +171,9 @@ int main(int argc,char *argv[])
                 break;
             default:
                 if(FD_ISSET(sockfd,&servfd))
-                {
+                {			
+			//将准备好的队列中，选取最顶一个
+			//此处会筛选已连接的客户
                         if((clientfd=accept(sockfd,(struct sockaddr*)&csockaddr,&a))==-1)
                         {
                             perror("fail to accept");
@@ -213,14 +250,10 @@ int main(int argc,char *argv[])
                                     strcat(sendbuf,fd_B[fd_C[n]]);
                                     strcat(sendbuf,"通信ing，请稍后联系");
                                     send(fd_A[i],sendbuf,strlen(sendbuf),0);
-                                    
-//                                     strcpy(sendbuf,"服务器：");
-//                                     strcat(sendbuf,rt);
-//                                     strcat(sendbuf,"现在处于空闲状态");
-//                                     send(fd_A[i],sendbuf,strlen(sendbuf),0);
+                               
                                     
                                     aaa=1;
-                                    //send(fd_A[i],fd_B[fd_C[n]],strlen(fd_B[fd_C[n]]),0);
+                           
                                 }
                                 if(aaa==1) break;
                                 
@@ -259,7 +292,7 @@ int main(int argc,char *argv[])
                                 {
                                     send(fd_A[fd_C[i]],recvbuf,strlen(recvbuf),0);
                                     memset(recvbuf,0,Max_buf);
-                                    send(fd_A[fd_C[i]],"服务器：你已被请求取消私聊",strlen("服务器：你已被请求取消私聊"),0);
+                                    send(fd_A[fd_C[i]],"服务器：你已被请求取消私聊",strlen("服务器：对方取消私聊"),0);
                                     
                                     
                                     strcpy(sendbuf,"广播：");
